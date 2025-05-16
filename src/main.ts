@@ -1,17 +1,5 @@
-// main.ts
-import Data from "../data/data.json"
-type Dessert = {
-  id: number;
-  name: string;
-  price: number;
-  category: string;
-  image: { 
-    thumbnail: string;
-    mobile: string;
-    tablet: string;
-    desktop: string;
-  };
-};
+
+import type { Desserts } from "./database.interface";
 
 class DatabaseService {
   private db: IDBDatabase | null = null;
@@ -40,19 +28,19 @@ class DatabaseService {
     });
   }
 
-  addDessert(dessert: Dessert): Promise<void> {
+  addDessert(dessert: Desserts): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.db) return reject("DB not initialized");
       const tx = this.db.transaction(this.STORE_NAME, "readwrite");
       const store = tx.objectStore(this.STORE_NAME);
-      // If item already exists, update quantity or ignore — here we just overwrite by id
+      
       const request = store.put(dessert);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
   }
 
-  getAllDesserts(): Promise<Dessert[]> {
+  getAllDesserts(): Promise<Desserts[]> {
     return new Promise((resolve, reject) => {
       if (!this.db) return reject("DB not initialized");
       const tx = this.db.transaction(this.STORE_NAME, "readonly");
@@ -86,22 +74,24 @@ class DatabaseService {
   }
 }
 
-async function fetchDesserts(): Promise<Dessert[]> {
+async function fetchDesserts(): Promise<Desserts[]> {
   try {
-    // Data is already imported as JSON, so just return it
-    return Data as Dessert[];
+    const response = await fetch('./data/data.json');
+    if (!response.ok) throw new Error("Failed to fetch desserts");
+    const desserts = await response.json();
+    return desserts as Desserts[];
   } catch (e) {
     console.error(e);
     return [];
   }
 }
-
-async function renderDesserts(desserts: Dessert[]) {
+// function to render desserts
+async function renderDesserts(desserts: Desserts[]) {
   const grid = document.getElementById("dessert-grid");
   if (!grid) return;
   grid.innerHTML = "";
 
-  desserts.forEach((d) => {
+  desserts.forEach((dessert) => {
     const card = document.createElement("div");
     card.style.background = "white";
     card.style.borderRadius = "1rem";
@@ -109,12 +99,13 @@ async function renderDesserts(desserts: Dessert[]) {
     card.style.padding = "1rem";
     card.style.textAlign = "center";
 
+    // Use the thumbnail image path from data.json
     card.innerHTML = `
-      <img src="${d.image.thumbnail}" alt="${d.name}" style="width:100%;height:160px;object-fit:cover;border-radius:0.75rem;margin-bottom:1rem;" />
-      <p style="margin:0;color:#a29e9e;text-transform:uppercase;">${d.category}</p>
-      <h3 style="margin:0.25rem 0;color:#2c2c2c;">${d.name}</h3>
-      <p style="color:#d54b1a;margin-bottom:0.75rem;">$${d.price.toFixed(2)}</p>
-      <button class="add-to-cart" data-id="${d.id}" style="
+      <img src="${dessert.image.thumbnail}" alt="${dessert.name}" style="width:100%;height:160px;object-fit:cover;border-radius:0.75rem;margin-bottom:1rem;" />
+      <p style="margin:0;color:#a29e9e;text-transform:uppercase;">${dessert.category}</p>
+      <h3 style="margin:0.25rem 0;color:#2c2c2c;">${dessert.name}</h3>
+      <p style="color:#d54b1a;margin-bottom:0.75rem;">$${dessert.price.toFixed(2)}</p>
+      <button class="add-to-cart" data-id="${dessert.id}" style="
         padding:0.5rem 1.25rem;
         font-weight:500;
         background:white;
@@ -147,7 +138,7 @@ async function renderCart(dbService: DatabaseService) {
     div.innerHTML = `
       <span>${item.name} - $${item.price.toFixed(2)}</span>
       <button class="remove-from-cart" data-id="${item.id}" style="
-        background: transparent; border:none; color:#e05a47; cursor:pointer;">X</button>
+        background: transparent; border:none; color:#e05a47; cursor:pointer;">Cancel</button>
     `;
     cartContainer.appendChild(div);
   });
@@ -162,7 +153,7 @@ async function init() {
   if (!app) return;
 
   app.innerHTML = `
-    <div style="display:flex; gap:2rem; font-family:'Segoe UI', sans-serif; background:#fdf7f4; padding:2rem;">
+    <div style="display:flex; gap:2rem; font-family:'Segoe UI', sans-serif; padding:2rem;">
       <div style="flex:3;">
         <h1>Desserts</h1>
         <div id="dessert-grid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:1.5rem;"></div>
