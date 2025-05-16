@@ -127,5 +127,18 @@ export class DatabaseService {
             request.onerror = () => reject(request.error);
         });
     }
+    // add checkout
+    public checkout(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            if (!this.db) {
+                return reject(new Error("Database not initialized"));
+            }
+            const transaction = this.db.transaction(this.STRORE_NAME, "readwrite");
+            const store = transaction.objectStore(this.STRORE_NAME);
+            const request = store.clear();
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
     
 }
